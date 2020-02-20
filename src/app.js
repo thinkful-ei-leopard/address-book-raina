@@ -7,8 +7,11 @@ const { NODE_ENV } = require('./config');
 const uuid = require('uuid/v4');
 const app = express();
 
-app.use(morgan('dev'));
-app.use(express.json());
+const morganOption = (NODE_ENV === 'production')
+  ? 'tiny'
+  : 'common';
+
+app.use(morgan(morganOption));
 app.use(helmet());
 app.use(cors());
 
@@ -19,7 +22,19 @@ app.get('/address', (req, res) => {
   res.send(addresses);
 });
 
-app.post('/address', (req, res) => {
+function validateBearerToken(req, res, next) {
+  const apiToken = process.env.API_TOKEN;
+  const authToken = req.get('Authorization');
+
+  if (!authToken || authToken.split(' ')[1] !== apiToken) {
+    return res.status(401).json({ error: 'Unauthorized request' });
+  }
+  // move to the next middleware
+  next();
+}
+
+
+app.post('/address', validateBearerToken, (req, res) => {
   //get the data
   const { firstName, lastName, address1, address2=false, city, state, zip} = req.query;
 
@@ -97,7 +112,7 @@ app.post('/address', (req, res) => {
     .send(addresses);
 });
 
-app.delete('/address/:id', (res,req) => {
+app.delete('/address/:id', validateBearerToken, (req,res) => {
   const index = addresses.findIndex(u => u.id === req.params.id);
 
   if (index === -1) {
@@ -108,7 +123,7 @@ app.delete('/address/:id', (res,req) => {
 
   addresses.splice(index, 1);
   res.send('Deleted');
-});
+})
 
 // eslint-disable-next-line no-unused-vars
 app.use(function errorHandler(error, req, res, next) { 
@@ -121,6 +136,7 @@ app.use(function errorHandler(error, req, res, next) {
   }
   res.status(500).json(response);
 });
+
 
 
 module.exports = app;
