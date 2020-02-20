@@ -12,9 +12,9 @@ const morganOption = (NODE_ENV === 'production')
   : 'common';
 
 app.use(morgan(morganOption));
+app.use(express.json());
 app.use(helmet());
 app.use(cors());
-
 
 const addresses = [];
 
@@ -36,7 +36,7 @@ function validateBearerToken(req, res, next) {
 
 app.post('/address', validateBearerToken, (req, res) => {
   //get the data
-  const { firstName, lastName, address1, address2=false, city, state, zip} = req.query;
+  const { firstName, lastName, address1, address2=false, city, state, zip} = req.body;
 
   //validation codes: 
   if (!firstName) {
@@ -109,7 +109,8 @@ app.post('/address', validateBearerToken, (req, res) => {
 
   res
     .status(201)
-    .send(addresses);
+    .location(`http://localhost:8000/address/${id}`)
+    .json({id: id});
 });
 
 app.delete('/address/:id', validateBearerToken, (req,res) => {
